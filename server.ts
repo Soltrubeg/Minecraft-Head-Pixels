@@ -66,7 +66,7 @@ const finalPixelsHex = facePixels.map((facePixel, i) => {
   }
 });
 
-console.log(finalPixelsHex); // Array of 64 hex colors with helmet overlay applied
+return finalPixelsHex
 
 }
 
