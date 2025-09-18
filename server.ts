@@ -17,13 +17,10 @@ async function getFaceColors(uuid: string): Promise<string[]> {
   for (let y = 8; y <= 15; y++) {
     for (let x = 8; x <= 15; x++) {
       const idx = (y * width + x) * 4;
-      const r = data[idx];
-      const g = data[idx + 1];
-      const b = data[idx + 2];
-      const a = data[idx + 3];
-      const hex = a === 255
-        ? `#${r.toString(16).padStart(2, "0")}${g.toString(16).padStart(2, "0")}${b.toString(16).padStart(2, "0")}`
-        : `#${r.toString(16).padStart(2, "0")}${g.toString(16).padStart(2, "0")}${b.toString(16).padStart(2, "0")}${a.toString(16).padStart(2, "0")}`;
+      const r = decoded[idx];
+      const g = decoded[idx + 1];
+      const b = decoded[idx + 2];
+      const a = decoded[idx + 3];
       faceColors.push([r,g,b].join(","));
     }
   }
