@@ -11,7 +11,7 @@ async function getFaceColors(uuid: string): Promise<string[]> {
   const texturesJson = JSON.parse(atob(texturesValue));
   const skinUrl = texturesJson.textures.SKIN.url;
   const skinBytes = new Uint8Array(await fetch(skinUrl).then(r => r.arrayBuffer()));
-  const decoded = decode(skinBytes);
+  const decoded = decode(skinBytes)["image"];
   const { width, data } = decoded;
   const faceColors: string[] = [];
   for (let y = 8; y <= 15; y++) {
