@@ -5,6 +5,14 @@ const faceStartX = 8, faceStartY = 8;
 const helmetStartX = 40, helmetStartY = 8;
 const toHex = (v: number) => v.toString(16).padStart(2, "0");
 
+type CacheEntry = {
+  colors: string[];
+  expiresAt: number;
+};
+
+const cache = new Map<string, CacheEntry>();
+const CACHE_TTL_MS = 5 * 60 * 1000;
+
 async function getFaceColors(uuid: string): Promise<string[]> {
   const res = await fetch(`https://sessionserver.mojang.com/session/minecraft/profile/${uuid}`);
   if (!res.ok) throw new Error("Invalid UUID");
@@ -39,6 +47,17 @@ async function getFaceColors(uuid: string): Promise<string[]> {
   return colors;
 }
 
+async function getFaceColorsCached(uuid: string): Promise<string[]> {
+  const now = Date.now();
+  const cached = cache.get(uuid);
+  if (cached && cached.expiresAt > now) {
+    return cached.colors;
+  }
+  const colors = await getFaceColors(uuid);
+  cache.set(uuid, { colors, expiresAt: now + CACHE_TTL_MS });
+  return colors;
+}
+
 Deno.serve(async (req) => {
   try {
     const uuid = new URL(req.url).searchParams.get("uuid");
@@ -49,7 +68,7 @@ Deno.serve(async (req) => {
         headers: { "Content-Type": "application/json" },
       });
     }
-    const colors = await getFaceColors(uuid);
+    const colors = await getFaceColorsCached(uuid);
     return new Response(JSON.stringify(colors), {
       headers: { "Content-Type": "application/json" },
     });
