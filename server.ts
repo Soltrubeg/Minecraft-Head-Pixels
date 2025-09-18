@@ -14,7 +14,6 @@ async function getFaceColors(uuid: string): Promise<string[]> {
   const decoded = decode(skinBytes);
   const { width, data } = decoded;
   const faceColors: string[] = [];
-  // Coordinates for face: x=8..15, y=8..15
   for (let y = 8; y <= 15; y++) {
     for (let x = 8; x <= 15; x++) {
       const idx = (y * width + x) * 4;
@@ -22,11 +21,10 @@ async function getFaceColors(uuid: string): Promise<string[]> {
       const g = data[idx + 1];
       const b = data[idx + 2];
       const a = data[idx + 3];
-      // Convert RGBA to hex string, ignoring alpha or including it
       const hex = a === 255
         ? `#${r.toString(16).padStart(2, "0")}${g.toString(16).padStart(2, "0")}${b.toString(16).padStart(2, "0")}`
         : `#${r.toString(16).padStart(2, "0")}${g.toString(16).padStart(2, "0")}${b.toString(16).padStart(2, "0")}${a.toString(16).padStart(2, "0")}`;
-      faceColors.push(hex);
+      faceColors.push([r,g,b].join(","));
     }
   }
   return faceColors;
