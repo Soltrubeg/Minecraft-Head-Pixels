@@ -10,11 +10,26 @@ async function getFaceColors(uuid: string): Promise<string[]> {
   const texturesValue = profile.properties.find((p: any) => p.name === "textures").value;
   const texturesJson = JSON.parse(atob(texturesValue));
   const skinUrl = texturesJson.textures.SKIN.url;
-
-  // fetch and decode PNG
   const skinBytes = new Uint8Array(await fetch(skinUrl).then(r => r.arrayBuffer()));
   const decoded = decode(skinBytes);
-  return decoded;
+  const { width, data } = decoded;
+  const faceColors: string[] = [];
+  // Coordinates for face: x=8..15, y=8..15
+  for (let y = 8; y <= 15; y++) {
+    for (let x = 8; x <= 15; x++) {
+      const idx = (y * width + x) * 4;
+      const r = data[idx];
+      const g = data[idx + 1];
+      const b = data[idx + 2];
+      const a = data[idx + 3];
+      // Convert RGBA to hex string, ignoring alpha or including it
+      const hex = a === 255
+        ? `#${r.toString(16).padStart(2, "0")}${g.toString(16).padStart(2, "0")}${b.toString(16).padStart(2, "0")}`
+        : `#${r.toString(16).padStart(2, "0")}${g.toString(16).padStart(2, "0")}${b.toString(16).padStart(2, "0")}${a.toString(16).padStart(2, "0")}`;
+      faceColors.push(hex);
+    }
+  }
+  return faceColors;
 }
 
 Deno.serve(async (req) => {
