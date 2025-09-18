@@ -69,10 +69,10 @@ Deno.serve(async (req) => {
     const url = new URL(req.url);
     const uuid = url.searchParams.get("uuid");
     if (!uuid) {
-      return new Response(JSON.stringify({
+      return new Response(JSON.stringify({ error: "Missing UUID" }), {
+        headers: { "Content-Type": "application/json" },
         status: 400,
-        statusText: "Missing UUID",
-      }));
+      });
     }
     const colors = await getFaceColors(uuid);
     return new Response(JSON.stringify(colors), {
