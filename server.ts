@@ -11,7 +11,7 @@ type CacheEntry = {
 };
 
 const cache = new Map<string, CacheEntry>();
-const CACHE_TTL_MS = 5 * 60 * 1000;
+const CACHE_TTL_MS = 20 * 60 * 1000;
 
 async function getFaceColors(uuid: string): Promise<string[]> {
   const res = await fetch(`https://sessionserver.mojang.com/session/minecraft/profile/${uuid}`);
