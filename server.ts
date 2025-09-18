@@ -22,13 +22,11 @@ const blockSize = 8;
 
 const toHex = (v) => v.toString(16).padStart(2, "0");
 
-// Extract face and helmet pixels
 const facePixels = [];
 const helmetPixels = [];
 
 for (let y = 0; y < blockSize; y++) {
   for (let x = 0; x < blockSize; x++) {
-    // Face pixel
     let faceIdx = ((faceStartY + y) * width + (faceStartX + x)) * 4;
     const fr = decoded[faceIdx];
     const fg = decoded[faceIdx + 1];
@@ -36,7 +34,6 @@ for (let y = 0; y < blockSize; y++) {
     const fa = decoded[faceIdx + 3];
     facePixels.push({ r: fr, g: fg, b: fb, a: fa });
 
-    // Helmet pixel
     let helmetIdx = ((helmetStartY + y) * width + (helmetStartX + x)) * 4;
     const hr = decoded[helmetIdx];
     const hg = decoded[helmetIdx + 1];
@@ -51,13 +48,10 @@ const finalPixelsHex = facePixels.map((facePixel, i) => {
   const helmetPixel = helmetPixels[i];
 
   if (helmetPixel.a === 255) {
-    // Fully opaque helmet pixel replaces face pixel
     return `#${toHex(helmetPixel.r)}${toHex(helmetPixel.g)}${toHex(helmetPixel.b)}`;
   } else if (helmetPixel.a === 0) {
-    // Fully transparent helmet pixel, keep face pixel
     return `#${toHex(facePixel.r)}${toHex(facePixel.g)}${toHex(facePixel.b)}`;
   } else {
-    // Partial alpha: blend helmet over face
     const alpha = helmetPixel.a / 255;
     const r = Math.round(helmetPixel.r * alpha + facePixel.r * (1 - alpha));
     const g = Math.round(helmetPixel.g * alpha + facePixel.g * (1 - alpha));
@@ -75,10 +69,11 @@ Deno.serve(async (req) => {
     const url = new URL(req.url);
     const uuid = url.searchParams.get("uuid");
     if (!uuid) {
-      return new Response(JSON.stringify({ error: "Missing uuid" }), {
+      return new Response(JSON.stringify({
         headers: { "Content-Type": "application/json" },
         status: 400,
-      });
+        statusText: "Bad Request"
+      }));
     }
     const colors = await getFaceColors(uuid);
     return new Response(JSON.stringify(colors), {
