@@ -13,25 +13,61 @@ async function getFaceColors(uuid: string): Promise<string[]> {
   const skinBytes = new Uint8Array(await fetch(skinUrl).then(r => r.arrayBuffer()));
   const decoded = decode(skinBytes)["image"];
 
-  const toHex = (v) => v.toString(16).padStart(2, "0");
-  const width = 64;
-  const startX = 8;
-  const startY = 8;
-  const blockSize = 8;
-  const facePixels = [];
-  for (let y = startY; y < startY + blockSize; y++) {
-    for (let x = startX; x < startX + blockSize; x++) {
-      const idx = (y * width + x) * 4;
-      const r = decoded[idx];
-      const g = decoded[idx + 1];
-      const b = decoded[idx + 2];
-      const a = decoded[idx + 3];
-      const hex = `#${toHex(r)}${toHex(g)}${toHex(b)}`;
-      facePixels.push(hex);
-    }
-  }
+ const width = 64;
+const faceStartX = 8;
+const faceStartY = 8;
+const helmetStartX = 40;
+const helmetStartY = 8;
+const blockSize = 8;
 
-  return facePixels;
+const toHex = (v) => v.toString(16).padStart(2, "0");
+
+// Extract face and helmet pixels
+const facePixels = [];
+const helmetPixels = [];
+
+for (let y = 0; y < blockSize; y++) {
+  for (let x = 0; x < blockSize; x++) {
+    // Face pixel
+    let faceIdx = ((faceStartY + y) * width + (faceStartX + x)) * 4;
+    const fr = decoded[faceIdx];
+    const fg = decoded[faceIdx + 1];
+    const fb = decoded[faceIdx + 2];
+    const fa = decoded[faceIdx + 3];
+    facePixels.push({ r: fr, g: fg, b: fb, a: fa });
+
+    // Helmet pixel
+    let helmetIdx = ((helmetStartY + y) * width + (helmetStartX + x)) * 4;
+    const hr = decoded[helmetIdx];
+    const hg = decoded[helmetIdx + 1];
+    const hb = decoded[helmetIdx + 2];
+    const ha = decoded[helmetIdx + 3];
+    helmetPixels.push({ r: hr, g: hg, b: hb, a: ha });
+  }
+}
+
+// Blend helmet over face
+const finalPixelsHex = facePixels.map((facePixel, i) => {
+  const helmetPixel = helmetPixels[i];
+
+  if (helmetPixel.a === 255) {
+    // Fully opaque helmet pixel replaces face pixel
+    return `#${toHex(helmetPixel.r)}${toHex(helmetPixel.g)}${toHex(helmetPixel.b)}`;
+  } else if (helmetPixel.a === 0) {
+    // Fully transparent helmet pixel, keep face pixel
+    return `#${toHex(facePixel.r)}${toHex(facePixel.g)}${toHex(facePixel.b)}`;
+  } else {
+    // Partial alpha: blend helmet over face
+    const alpha = helmetPixel.a / 255;
+    const r = Math.round(helmetPixel.r * alpha + facePixel.r * (1 - alpha));
+    const g = Math.round(helmetPixel.g * alpha + facePixel.g * (1 - alpha));
+    const b = Math.round(helmetPixel.b * alpha + facePixel.b * (1 - alpha));
+    return `#${toHex(r)}${toHex(g)}${toHex(b)}`;
+  }
+});
+
+console.log(finalPixelsHex); // Array of 64 hex colors with helmet overlay applied
+
 }
 
 Deno.serve(async (req) => {
