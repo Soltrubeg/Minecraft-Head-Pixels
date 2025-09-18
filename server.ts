@@ -73,8 +73,7 @@ Deno.serve(async (req) => {
       return new Response(
       JSON.stringify({ error: "Missing UUID" }),
       {
-        status: 420,
-        statusText: "Missing UUID",
+        status: 400,
         headers: { "content-type": "application/json" },
       },
     );
