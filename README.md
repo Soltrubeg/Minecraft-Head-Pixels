@@ -1,4 +1,2 @@
-# Medieval Name Generator
-Send a web request to https://medieval-name-generator.deno.dev/ to get a random medieval name and gender!
-- Use ?gender=[male/female] to determine the names' gender.
-- Use ?amount=[1-100] to determine howmany names it should generate at once.
+# Minecraft Head Pixels
+Send a ``GET`` ``application/json`` web request to https://mc-heads.deno.dev/?uuid=[UUID] and it will return the raw pixel data of the uuid's face texture.
