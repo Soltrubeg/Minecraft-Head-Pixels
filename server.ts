@@ -24,7 +24,7 @@ async function getFaceColors(uuid: string): Promise<string[]> {
       faceColors.push([r,g,b].join(","));
     }
   }
-  return decoded;
+  return faceColors;
 }
 
 Deno.serve(async (req) => {
