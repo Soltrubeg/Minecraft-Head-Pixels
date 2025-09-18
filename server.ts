@@ -13,21 +13,23 @@ async function getFaceColors(uuid: string): Promise<string[]> {
   const skinBytes = new Uint8Array(await fetch(skinUrl).then(r => r.arrayBuffer()));
   const decoded = decode(skinBytes)["image"];
 
+  const toHex = (v) => v.toString(16).padStart(2, "0");
   const width = 64;
-const startX = 8;
-const startY = 8;
-const blockSize = 8;
-const facePixels = [];
-for (let y = startY; y < startY + blockSize; y++) {
-  for (let x = startX; x < startX + blockSize; x++) {
-    const idx = (y * width + x) * 4;
-    const r = decoded[idx];
-    const g = decoded[idx + 1];
-    const b = decoded[idx + 2];
-    const a = decoded[idx + 3];
-    facePixels.push(`rgba(${r},${g},${b},${a / 255})`);
+  const startX = 8;
+  const startY = 8;
+  const blockSize = 8;
+  const facePixels = [];
+  for (let y = startY; y < startY + blockSize; y++) {
+    for (let x = startX; x < startX + blockSize; x++) {
+      const idx = (y * width + x) * 4;
+      const r = decoded[idx];
+      const g = decoded[idx + 1];
+      const b = decoded[idx + 2];
+      const a = decoded[idx + 3];
+      const hex = `#${toHex(r)}${toHex(g)}${toHex(b)}`;
+      facePixels.push(hex);
+    }
   }
-}
 
   return facePixels;
 }
