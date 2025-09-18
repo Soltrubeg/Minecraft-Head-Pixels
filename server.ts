@@ -1,75 +1,56 @@
-// import dependencies
-import {
-  createCanvas,
-  loadImage,
-} from "https://deno.land/x/canvas@v1.4.1/mod.ts";
+import { decode } from "https://deno.land/x/pngs@0.1.1/mod.ts";
 
-// helper to get face colors
 async function getFaceColors(uuid: string): Promise<string[]> {
-  // 1. Mojang session profile
-  const profileRes = await fetch(
-    `https://sessionserver.mojang.com/session/minecraft/profile/${uuid}`
-  );
-  if (!profileRes.ok) throw new Error("Invalid UUID");
+  const profileRes = await fetch(`https://sessionserver.mojang.com/session/minecraft/profile/${uuid}`);
   const profile = await profileRes.json();
-
-  // 2. base64 decode 'value'
-  const texturesValue = profile.properties.find(
-    (p: any) => p.name === "textures"
-  ).value;
+  const texturesValue = profile.properties.find((p: any) => p.name === "textures").value;
   const texturesJson = JSON.parse(atob(texturesValue));
-
-  // 3. SKIN texture URL
   const skinUrl = texturesJson.textures.SKIN.url;
-  const skinImg = await loadImage(skinUrl);
 
-  // 4. draw face + helmet
-  const canvas = createCanvas(8, 8);
-  const ctx = canvas.getContext("2d");
-  // face region
-  ctx.drawImage(skinImg, 8, 8, 8, 8, 0, 0, 8, 8);
-  // helmet overlay
-  ctx.drawImage(skinImg, 40, 8, 8, 8, 0, 0, 8, 8);
+  const skinPng = await fetch(skinUrl).then(r => r.arrayBuffer());
+  const { width, height, pixels } = decode(new Uint8Array(skinPng)); // pixels = Uint8Array RGBA
 
-  // 5. extract pixel data
-  const imgData = ctx.getImageData(0, 0, 8, 8).data;
-  const colors: string[] = [];
-  for (let i = 0; i < imgData.length; i += 4) {
-    const r = imgData[i];
-    const g = imgData[i + 1];
-    const b = imgData[i + 2];
-    // ignore alpha for now
-    colors.push(
-      `#${[r, g, b].map((x) => x.toString(16).padStart(2, "0")).join("")}`
-    );
+  // helper to read a pixel
+  function getPixel(x: number, y: number): [number,number,number,number] {
+    const idx = (y * width + x) * 4;
+    return [
+      pixels[idx],
+      pixels[idx+1],
+      pixels[idx+2],
+      pixels[idx+3],
+    ];
   }
 
+  const colors: string[] = [];
+  for (let y = 0; y < 8; y++) {
+    for (let x = 0; x < 8; x++) {
+      // face pixel
+      const [fr,fg,fb,fa] = getPixel(8+x,8+y);
+      // helmet pixel
+      const [hr,hg,hb,ha] = getPixel(40+x,8+y);
+
+      // alpha-blend helmet over face
+      const aH = ha/255;
+      const aF = fa/255;
+      const r = Math.round(hr*aH + fr*(1-aH));
+      const g = Math.round(hg*aH + fg*(1-aH));
+      const b = Math.round(hb*aH + fb*(1-aH));
+
+      colors.push(`#${[r,g,b].map(v=>v.toString(16).padStart(2,"0")).join("")}`);
+    }
+  }
   return colors;
 }
 
-// serve endpoint
+
 Deno.serve(async (req) => {
   try {
     const url = new URL(req.url);
     const uuid = url.searchParams.get("uuid");
-    if (!uuid) {
-      return new Response(JSON.stringify({ error: "Missing uuid" }), {
-        headers: { "Content-Type": "application/json" },
-        status: 400,
-      });
-    }
-
+    if (!uuid) return new Response(JSON.stringify({error:"Missing uuid"}),{status:400});
     const colors = await getFaceColors(uuid);
-
-    return new Response(JSON.stringify(colors), {
-      headers: { "Content-Type": "application/json" },
-    });
-  } catch (err) {
-    console.error(err);
-    return new Response(JSON.stringify({ error: err.message }), {
-      headers: { "Content-Type": "application/json" },
-      status: 500,
-    });
+    return new Response(JSON.stringify(colors),{headers:{"Content-Type":"application/json"}});
+  } catch(e){
+    return new Response(JSON.stringify({error:e.message}),{status:500});
   }
 });
-// run with: deno run --allow-net server.ts
