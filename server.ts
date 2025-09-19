@@ -6,24 +6,25 @@ const helmetStartX = 40, helmetStartY = 8;
 const toHex = (v: number) => v.toString(16).padStart(2, "0");
 
 type CacheEntry = {
-  colors: string[];
+  image: Uint8Array;
   expiresAt: number;
 };
 
 const cache = new Map<string, CacheEntry>();
-const CACHE_TTL_MS = 20 * 60 * 1000;
+const CACHE_TTL_MS = 30 * 60 * 1000;
 
-async function getFaceColors(uuid: string): Promise<string[]> {
+async function getImageData(uuid: string): Promise<Uint8Array> {
   const res = await fetch(`https://sessionserver.mojang.com/session/minecraft/profile/${uuid}`);
   if (!res.ok) throw new Error("Invalid UUID");
   const profile = await res.json();
   const texturesValue = profile.properties.find((p: any) => p.name === "textures").value;
   const texturesJson = JSON.parse(atob(texturesValue));
   const skinUrl = texturesJson.textures.SKIN.url;
+  const bytes = await fetch(skinUrl).then(r => r.arrayBuffer());
+  return decode(new Uint8Array(bytes));
+}
 
-  const bytes = new Uint8Array(await fetch(skinUrl).then(r => r.arrayBuffer()));
-  const { image } = decode(bytes);
-
+async function getFaceColors(image: Uint8Array): Promise<string[]> {
   const colors: string[] = [];
   for (let y = 0; y < blockSize; y++) {
     for (let x = 0; x < blockSize; x++) {
@@ -49,13 +50,14 @@ async function getFaceColors(uuid: string): Promise<string[]> {
 
 async function getFaceColorsCached(uuid: string): Promise<string[]> {
   const now = Date.now();
-  const cached = cache.get(uuid);
+  const cached = cache.get(uuid.replaceAll("-", ""));
   if (cached && cached.expiresAt > now) {
-    return cached.colors;
+    return getFaceColors(cached.image);
   }
-  const colors = await getFaceColors(uuid);
-  cache.set(uuid, { colors, expiresAt: now + CACHE_TTL_MS });
-  return colors;
+  const image = await getImageData(uuid);
+  cache.set(uuid.replaceAll("-", ""), { image, expiresAt: now + CACHE_TTL_MS });
+  console.log(cache);
+  return getFaceColors(image);
 }
 
 Deno.serve(async (req) => {
